@@ -1,0 +1,13 @@
+#!/bin/sh
+set -xe
+
+# Customize this file to your needs, any preparation you want all interactive jobs
+# to share can go here.
+pip3 install rmate
+
+# Make sure you start SSHD at the end of the script, because run-interactive.sh
+# waits for SSHD as a signal that the job is ready for you to connect to it.
+echo "<YOUR SSH PUB KEY HERE>" > ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+service ssh start
+while true; do sleep 1000000; done
