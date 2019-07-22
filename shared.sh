@@ -27,18 +27,16 @@ sshd_status() {
 # $1 = job number
 forward_and_connect() {
     # Forward 31337 local port to SSHD in the job
-    tmux new-session -d 'pit forward '"$1"' 31337:22'
+    if [[ ! $(lsof -i tcp:31337) ]]; then
+        tmux new-session -d 'pit forward '"$1"' 31337:22'
 
-    # Wait for forwarding
-    while [[ ! $(lsof -i tcp:31337) ]]; do
-        echo "a"
-        sleep 2
-    done
+        # Wait for forwarding
+        while [[ ! $(lsof -i tcp:31337) ]]; do
+            sleep 2
+        done
+    fi
 
-    # Use autossh to detect stale connections as the VPN can be spotty
     # This will drop you in a shell in the job
-    tmux new-window -d ''$SSH' -M 20000 -o "UserKnownHostsFile /dev/null" -R 52698:localhost:52698 -p 31337 root@127.0.0.1'
-
-    # Attach to tmux
-    $TMUX attach
+    # Disable host key checking as the key will be different for every job
+    $SSH -M 20000 -o "StrictHostKeyChecking no" -o "UserKnownHostsFile /dev/null" -R 52698:localhost:52698 -p 31337 root@127.0.0.1
 }
