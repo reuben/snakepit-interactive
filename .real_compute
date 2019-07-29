@@ -1,0 +1,18 @@
+#!/bin/bash
+set -xe
+
+# Customize this file to your needs, any preparation you want all interactive jobs
+# to share can go here.
+apt-get install -y python3-venv git-lfs
+
+pip3 install rmate # globally
+
+git clone https://github.com/mozilla/DeepSpeech.git
+cd DeepSpeech
+git lfs fetch
+git lfs checkout
+
+python3 -m venv /tmp/venv
+. /tmp/venv/bin/activate
+pip install <(grep -v tensorflow requirements.txt)
+pip install tensorflow-gpu=1.14.0
