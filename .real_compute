@@ -14,5 +14,7 @@ git lfs checkout
 
 python3 -m venv /tmp/venv
 . /tmp/venv/bin/activate
-pip install <(grep -v tensorflow requirements.txt)
+pip install wheel
+pip install -r <(grep -v tensorflow requirements.txt)
 pip install tensorflow-gpu=1.14.0
+pip install $(python util/taskcluster.py --decoder)
