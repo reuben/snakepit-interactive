@@ -7,10 +7,14 @@ apt-get install -y python3-venv git-lfs
 
 pip3 install rmate # globally
 
-git clone https://github.com/mozilla/DeepSpeech.git
+git lfs install
+
+# Avoid cloning inside /data as the LFS phase is super slow
+pushd /tmp
+    git clone https://github.com/mozilla/DeepSpeech.git
+popd
+mv /tmp/DeepSpeech .
 cd DeepSpeech
-git lfs fetch
-git lfs checkout
 
 python3 -m venv /tmp/venv
 . /tmp/venv/bin/activate

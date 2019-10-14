@@ -4,6 +4,13 @@ set -xe
 echo "<YOUR SSH PUB KEY HERE>" > ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 
+# Prevent abrupt disconnects from blocking port forwarding by only allowing
+# two ClientAlive messages (one every 15 seconds) to go without a response
+# from the client.
+echo "ClientAliveInterval 15" >> /etc/ssh/sshd_config
+echo "ClientAliveCountMax 2" >> /etc/ssh/sshd_config
+service ssh restart
+
 apt-get install -y tmux
 
 # Create a tmux session, pipe its output to a file, then tail the file so |pit log| still works
