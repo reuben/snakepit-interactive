@@ -14,7 +14,7 @@ service ssh restart
 apt-get install -y tmux
 
 # Create a tmux session, pipe its output to a file, then tail the file so |pit log| still works
-tmux new -d -s interactive
+SHELL="/bin/bash" tmux new -d -s interactive
 tmux pipe-pane -o 'cat >>.tmux_output.log'
-tmux send-keys -t interactive.0 "./.real_compute" ENTER
+tmux send-keys -t interactive.0 "source .real_compute" ENTER
 tail -f .tmux_output.log

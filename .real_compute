@@ -1,24 +1,74 @@
 #!/bin/bash
 set -xe
 
-# Customize this file to your needs, any preparation you want all interactive jobs
-# to share can go here.
-apt-get install -y python3-venv git-lfs
+# Adapted from https://hub.docker.com/layers/tensorflow/tensorflow/2.3.1-gpu/images/sha256-1d0736e46ae9a961c2111394a43e0bfd266e6151a90d613b6f86229cf01e40e5
+CUDA_VERSION=10.1.243
+CUDA_PKG_VERSION=10-1=10.1.243-1
+CUDNN=7.6.4.38-1
+CUDNN_MAJOR_VERSION=7
+LIB_DIR_PREFIX=x86_64
+LIBNVINFER=6.0.1-1
+LIBNVINFER_MAJOR_VERSION=6
+ARCH=
+CUDA=10.1
 
-pip3 install rmate # globally
+apt-get update
+apt-get install -y --no-install-recommends gnupg2 curl ca-certificates apt-transport-https
+curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add -
+echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list
+echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
+apt-get purge --autoremove -y curl
+rm -rf /var/lib/apt/lists/* # buildkit
 
-git lfs install
+apt-get update
+apt-get install -y --no-install-recommends \
+    "cuda-cudart-$CUDA_PKG_VERSION" \
+    cuda-compat-10-1 \
+    build-essential \
+    "cuda-command-line-tools-${CUDA/./-}" \
+    "libcublas10=10.2.1.243-1" \
+    "cuda-nvrtc-${CUDA/./-}" \
+    "cuda-cufft-${CUDA/./-}" \
+    "cuda-curand-${CUDA/./-}" \
+    "cuda-cusolver-${CUDA/./-}" \
+    "cuda-cusparse-${CUDA/./-}" \
+    curl \
+    "libcudnn7=${CUDNN}+cuda${CUDA}" \
+    libfreetype6-dev \
+    libhdf5-serial-dev \
+    libzmq3-dev \
+    pkg-config \
+    software-properties-common \
+    unzip \
+    "libnvinfer${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA}" \
+    "libnvinfer-plugin${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA}"
 
-# Avoid cloning inside /data as the LFS phase is super slow
-pushd /tmp
-    git clone https://github.com/mozilla/DeepSpeech.git
-popd
-mv /tmp/DeepSpeech .
+export LD_LIBRARY_PATH=/usr/local/cuda-10.1/compat:/usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PAT
+
+# Now comes our stuff
+
+apt-get install -y --no-install-recommends \
+    python3-venv \
+    swig
+
+cd /data/rw/pit/keep
+git clone https://github.com/mozilla/DeepSpeech
 cd DeepSpeech
 
 python3 -m venv /tmp/venv
-. /tmp/venv/bin/activate
-pip install wheel
-pip install -r <(grep -v tensorflow requirements.txt)
-pip install tensorflow-gpu==1.14.0
-pip install $(python util/taskcluster.py --decoder)
+source /tmp/venv/bin/activate
+pip install -U pip setuptools wheel
+DS_NODECODER=1 pip install -e .
+
+sed -ie 's/tar -C $(SWIG_ROOT)/tar --no-same-owner -C $(SWIG_ROOT)/' native_client/definitions.mk
+
+cd native_client/ctcdecode
+make bindings NUM_PROCESSES=32
+pip install -U dist/*.whl
+cd ../..
+
+set +xe
+
+curl -L https://iterm2.com/shell_integration/install_shell_integration.sh | bash
+export ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=YES
+source ~/.iterm2_shell_integration.bash
